@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Championship Mini-Golf 500</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background: #0f172a;
+            color: #ffffff;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        #game-container {
+            position: relative;
+            width: 100%;
+            max-width: 520px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            background: #1e293b;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+            overflow: hidden;
+            border: 2px solid #334155;
+        }
+        header {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            padding: 12px 20px;
+            font-size: 0.95rem;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            background: #0f172a;
+            border-bottom: 2px solid #334155;
+            align-items: center;
+            z-index: 5;
+        }
+        .header-left {
+            display: flex;
+            gap: 8px;
+        }
+        .btn {
+            background: #22c55e;
+            color: #ffffff;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn:hover { background: #16a34a; }
+        
+        .stat {
+            background: rgba(255, 255, 255, 0.08);
+            padding: 6px 12px;
+            border-radius: 12px;
+        }
+        
+        canvas {
+            background: #14532d;
+            touch-action: none;
+            cursor: pointer;
+            width: 100%;
+            height: auto;
+            aspect-ratio: 3 / 4;
+            display: block;
+        }
+
+        #message {
+            padding: 12px;
+            font-size: 0.9rem;
+            color: #cbd5e1;
+            text-align: center;
+            background: #0f172a;
+            width: 100%;
+            border-top: 2px solid #334155;
+            min-height: 48px;
+            z-index: 5;
+        }
+
+        /* Overlays */
+        .overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            padding: 20px;
+            text-align: center;
+        }
+        .overlay h1 {
+            font-size: 2.2rem;
+            margin-bottom: 10px;
+            color: #4ade80;
+            text-shadow: 0 2px 10px rgba(74, 222, 128, 0.3);
+        }
+        .overlay p {
+            color: #94a3b8;
+            margin-bottom: 25px;
+            font-size: 1.05rem;
+        }
+        .big-btn {
+            background: #22c55e;
+            color: white;
+            font-size: 1.2rem;
+            padding: 14px 32px;
+            border-radius: 12px;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(34, 197, 94, 0.4);
+            transition: transform 0.1s, background 0.2s;
+        }
+        .big-btn:active { transform: scale(0.96); }
+
+        /* Broader Level Selector Grid Overlay */
+        #map-overlay {
+            justify-content: flex-start;
+            padding-top: 20px;
+            display: none;
+            width: 100%;
+        }
+        
+        .difficulty-tabs {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+            justify-content: center;
+            width: 100%;
+            max-width: 440px;
+        }
+        .diff-tab {
+            background: #334155;
+            border: none;
+            color: #94a3b8;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .diff-tab.active {
+            background: #22c55e;
+            color: white;
+        }
+
+        .grid-container {
+            width: 92%;
+            max-width: 460px;
+            max-height: 380px;
+            overflow-y: auto;
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            padding: 14px;
+            margin-bottom: 15px;
+            border: 1px solid #334155;
+            border-radius: 12px;
+            background: #0f172a;
+        }
+        .level-node {
+            background: #1e293b;
+            color: #64748b;
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 0.9rem;
+            border: 2px solid #334155;
+        }
+        .level-node.unlocked {
+            background: #1e293b;
+            border-color: #22c55e;
+            color: #4ade80;
+            cursor: pointer;
+        }
+        .level-node.unlocked:hover {
+            background: #22c55e;
+            color: white;
+            transform: scale(1.05);
+        }
+        .level-node.completed {
+            background: #166534;
+            border-color: #4ade80;
+            color: white;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <header>
+        <div class="header-left">
+            <button class="btn" id="map-btn">Map</button>
+            <button class="btn" id="fullscreen-btn">Fullscreen</button>
+        </div>
+        <div class="stat">Hole: <span id="hole-num">1</span>/500</div>
+        <div class="stat">Strokes: <span id="strokes">0</span></div>
+    </header>
+    
+    <canvas id="gameCanvas" width="480" height="640"></canvas>
+    
+    <div id="message">Drag backward to aim, release to putt!</div>
+
+    <!-- MAIN MENU OVERLAY -->
+    <div id="start-overlay" class="overlay">
+        <h1>Mega Golf 500</h1>
+        <p>500 Levels Across 5 Difficulties!</p>
+        <button class="big-btn" onclick="openMapFromMenu()">Play Levels</button>
+    </div>
+
+    <!-- LEVEL MAP OVERLAY -->
+    <div id="map-overlay" class="overlay">
+        <h2 style="color: #f8fafc; margin-bottom: 10px; font-size: 1.3rem;">Tournament World Map</h2>
+        
+        <div class="difficulty-tabs">
+            <button class="diff-tab active" onclick="switchTier(0)">Easy (1-100)</button>
+            <button class="diff-tab" onclick="switchTier(1)">Medium (101-200)</button>
+            <button class="diff-tab" onclick="switchTier(2)">Hard (201-300)</button>
+            <button class="diff-tab" onclick="switchTier(3)">Expert (301-400)</button>
+            <button class="diff-tab" onclick="switchTier(4)">Master (401-500)</button>
+        </div>
+
+        <div class="grid-container" id="level-grid"></div>
+        <button class="btn" style="padding: 8px 24px;" onclick="closeMap()">Back to Game</button>
+    </div>
+
+    <!-- HOLE WON OVERLAY -->
+    <div id="win-overlay" class="overlay" style="display: none;">
+        <h1>Hole Complete!</h1>
+        <p id="win-stats">Strokes: 2</p>
+        <button class="big-btn" onclick="returnToMapAfterWin()">Level Map</button>
+    </div>
+</div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+const holeNumEl = document.getElementById('hole-num');
+const strokesEl = document.getElementById('strokes');
+const messageEl = document.getElementById('message');
+const startOverlay = document.getElementById('start-overlay');
+const mapOverlay = document.getElementById('map-overlay');
+const winOverlay = document.getElementById('win-overlay');
+const levelGrid = document.getElementById('level-grid');
+const fullscreenBtn = document.getElementById('fullscreen-btn');
+
+// Fullscreen Toggle Logic
+fullscreenBtn.addEventListener('click', () => {
+    if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen().catch(err => {
+            alert(`Error attempting to enable fullscreen mode: ${err.message}`);
+        });
+        fullscreenBtn.textContent = "Exit Full";
+    } else {
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        }
+        fullscreenBtn.textContent = "Fullscreen";
+    }
+});
+
+document.addEventListener('fullscreenchange', () => {
+    if (!document.fullscreenElement) {
+        fullscreenBtn.textContent = "Fullscreen";
+    }
+});
+
+// Game Progress State
+let currentLevel = 0;
+let unlockedLevel = 0; 
+let totalStrokes = 0;
+let holeStrokes = 0;
+let currentTierOffset = 0;
+let gameState = 'MENU';
+
+// World & Physics Setup
+const world = { width: 480, height: 1200 };
+const ball = { x: 240, y: 1100, vx: 0, vy: 0, radius: 10, scale: 1, friction: 0.985, stopThreshold: 0.05 };
+const hole = { x: 240, y: 150, radius: 14 };
+let currentWalls = [];
+const camera = { x: 0, y: 0, width: 480, height: 640 };
+
+let isDragging = false;
+let dragCurrent = { x: 0, y: 0 };
+
+// Generate 500 Levels with Scaling Difficulty
+const levels = [];
+for (let i = 0; i < 500; i++) {
+    let walls = [];
+    let tier = Math.floor(i / 100);
+    let wallCount = 1 + tier + Math.floor(i / 150);
+    
+    for (let w = 0; w < wallCount; w++) {
+        let width = Math.max(80, 160 - (tier * 15) + ((i * 7) % 50));
+        let height = 18;
+        let x = 40 + ((i * 47 + w * 93) % 240);
+        let y = 250 + w * (200 - tier * 15) + ((i * 17) % 40);
+        walls.push({ x: x, y: y, w: width, h: height });
+    }
+    levels.push({ walls: walls });
+}
+
+function buildLevelGrid(tierIndex = 0) {
+    currentTierOffset = tierIndex * 100;
+    levelGrid.innerHTML = '';
+    
+    const tabs = document.querySelectorAll('.diff-tab');
+    tabs.forEach((t, idx) => {
+        if (idx === tierIndex) t.classList.add('active');
+        else t.classList.remove('active');
+    });
+
+    for (let i = currentTierOffset; i < currentTierOffset + 100; i++) {
+        const node = document.createElement('div');
+        node.className = 'level-node';
+        node.textContent = i + 1;
+        
+        if (i <= unlockedLevel) {
+            node.classList.add('unlocked');
+            if (i < unlockedLevel) node.classList.add('completed');
+            node.onclick = () => selectLevel(i);
+        }
+        levelGrid.appendChild(node);
+    }
+}
+
+function switchTier(tierIndex) {
+    buildLevelGrid(tierIndex);
+}
+
+document.getElementById('map-btn').addEventListener('click', () => {
+    let activeTier = Math.floor(currentLevel / 100);
+    buildLevelGrid(activeTier);
+    mapOverlay.style.display = 'flex';
+});
+
+function openMapFromMenu() {
+    startOverlay.style.display = 'none';
+    buildLevelGrid(0);
+    mapOverlay.style.display = 'flex';
+}
+
+function closeMap() {
+    mapOverlay.style.display = 'none';
+    if(gameState === 'MENU') {
+        loadLevel(currentLevel);
+    }
+}
+
+function selectLevel(index) {
+    currentLevel = index;
+    mapOverlay.style.display = 'none';
+    winOverlay.style.display = 'none';
+    loadLevel(currentLevel);
+}
+
+function loadLevel(index) {
+    const lvl = levels[index];
+    ball.x = 240;
+    ball.y = 1100;
+    ball.vx = 0;
+    ball.vy = 0;
+    ball.scale = 1;
+    
+    hole.x = 100 + ((index * 73) % 280);
+    hole.y = 120 + ((index * 37) % 100);
+    
+    currentWalls = lvl.walls;
+    holeStrokes = 0;
+    holeNumEl.textContent = index + 1;
+    strokesEl.textContent = totalStrokes;
+    gameState = 'IDLE';
+    messageEl.textContent = `Level ${index + 1}: Drag backward to aim, release to putt!`;
+    
+    updateCamera();
+}
+
+function updateCamera() {
+    camera.y = ball.y - canvas.height / 2;
+    if (camera.y < 0) camera.y = 0;
+    if (camera.y > world.height - canvas.height) camera.y = world.height - canvas.height;
+}
+
+function getCanvasCoords(e) {
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    
+    return {
+        x: (clientX - rect.left) * (canvas.width / rect.width) + camera.x,
+        y: (clientY - rect.top) * (canvas.height / rect.height) + camera.y
+    };
+}
+
+function handleStart(e) {
+    if (gameState !== 'IDLE') return;
+    const pos = getCanvasCoords(e);
+    if (Math.hypot(pos.x - ball.x, pos.y - ball.y) < 60) {
+        isDragging = true;
+        dragCurrent = pos;
+        e.preventDefault();
+    }
+}
+
+function handleMove(e) {
+    if (!isDragging) return;
+    dragCurrent = getCanvasCoords(e);
+    e.preventDefault();
+}
+
+function handleEnd(e) {
+    if (!isDragging) return;
+    isDragging = false;
+    
+    const dx = ball.x - dragCurrent.x;
+    const dy = ball.y - dragCurrent.y;
+    const power = Math.hypot(dx, dy);
+    
+    if (power > 5) {
+        const launchPower = Math.min(power * 0.15, 22);
+        const angle = Math.atan2(dy, dx);
+        
+        ball.vx = Math.cos(angle) * launchPower;
+        ball.vy = Math.sin(angle) * launchPower;
+        
+        gameState = 'MOVING';
+        holeStrokes++;
+        totalStrokes++;
+        strokesEl.textContent = totalStrokes;
+        messageEl.textContent = "Rolling...";
+    }
+    e.preventDefault();
+}
+
+canvas.addEventListener('mousedown', handleStart);
+window.addEventListener('mousemove', handleMove);
+window.addEventListener('mouseup', handleEnd);
+
+canvas.addEventListener('touchstart', handleStart, { passive: false });
+window.addEventListener('touchmove', handleMove, { passive: false });
+window.addEventListener('touchend', handleEnd, { passive: false });
+
+function update() {
+    if (gameState === 'MOVING') {
+        ball.x += ball.vx;
+        ball.y += ball.vy;
+        
+        ball.vx *= ball.friction;
+        ball.vy *= ball.friction;
+        
+        if (ball.x - ball.radius < 20) { ball.x = 20 + ball.radius; ball.vx *= -0.8; }
+        if (ball.x + ball.radius > world.width - 20) { ball.x = world.width - 20 - ball.radius; ball.vx *= -0.8; }
+        if (ball.y - ball.radius < 20) { ball.y = 20 + ball.radius; ball.vy *= -0.8; }
+        if (ball.y + ball.radius > world.height - 20) { ball.y = world.height - 20 - ball.radius; ball.vy *= -0.8; }
+        
+        currentWalls.forEach(wall => {
+            if (
+                ball.x + ball.radius > wall.x &&
+                ball.x - ball.radius < wall.x + wall.w &&
+                ball.y + ball.radius > wall.y &&
+                ball.y - ball.radius < wall.y + wall.h
+            ) {
+                const overlapX = Math.min(ball.x + ball.radius - wall.x, wall.x + wall.w - (ball.x - ball.radius));
+                const overlapY = Math.min(ball.y + ball.radius - wall.y, wall.y + wall.h - (ball.y - ball.radius));
+                
+                if (overlapX < overlapY) {
+                    ball.vx *= -0.8;
+                    ball.x += (ball.x < wall.x + wall.w / 2) ? -overlapX : overlapX;
+                } else {
+                    ball.vy *= -0.8;
+                    ball.y += (ball.y < wall.y + wall.h / 2) ? -overlapY : overlapY;
+                }
+            }
+        });
+        
+        updateCamera();
+
+        if (Math.hypot(ball.x - hole.x, ball.y - hole.y) < 12 && Math.hypot(ball.vx, ball.vy) < 4.5) {
+            gameState = 'SINKING';
+            messageEl.textContent = "It's in!";
+            return;
+        }
+        
+        if (Math.hypot(ball.vx, ball.vy) < ball.stopThreshold) {
+            ball.vx = 0;
+            ball.vy = 0;
+            gameState = 'IDLE';
+            messageEl.textContent = "Drag backward to aim, release to putt!";
+        }
+    } else if (gameState === 'SINKING') {
+        ball.x += (hole.x - ball.x) * 0.2;
+        ball.y += (hole.y - ball.y) * 0.2;
+        ball.scale -= 0.06;
+        updateCamera();
+        
+        if (ball.scale <= 0) {
+            gameState = 'WON';
+            if (currentLevel === unlockedLevel && unlockedLevel < 499) {
+                unlockedLevel++;
+            }
+            document.getElementById('win-stats').textContent = `Level ${currentLevel + 1} Cleared in ${holeStrokes} strokes!`;
+            winOverlay.style.display = 'flex';
+        }
+    }
+}
+
+function returnToMapAfterWin() {
+    winOverlay.style.display = 'none';
+    let targetTier = Math.floor(currentLevel / 100);
+    buildLevelGrid(targetTier);
+    mapOverlay.style.display = 'flex';
+}
+
+function draw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    ctx.save();
+    ctx.translate(0, -camera.y);
+
+    ctx.fillStyle = '#14532d';
+    ctx.fillRect(0, 0, world.width, world.height);
+    
+    ctx.fillStyle = '#166534';
+    ctx.fillRect(20, 20, world.width - 40, world.height - 40);
+    
+    ctx.strokeStyle = '#15803d';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(20, 20, world.width - 40, world.height - 40);
+
+    ctx.fillStyle = '#052e16';
+    ctx.beginPath();
+    ctx.arc(hole.x, hole.y, hole.radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#14532d';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    ctx.fillStyle = '#14532d';
+    ctx.strokeStyle = '#16a34a';
+    ctx.lineWidth = 2;
+    currentWalls.forEach(wall => {
+        ctx.fillRect(wall.x, wall.y, wall.w, wall.h);
+        ctx.strokeRect(wall.x, wall.y, wall.w, wall.h);
+    });
+
+    if (isDragging) {
+        ctx.strokeStyle = '#facc15';
+        ctx.lineWidth = 3;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(ball.x, ball.y);
+        ctx.lineTo(ball.x + (ball.x - dragCurrent.x), ball.y + (ball.y - dragCurrent.y));
+        ctx.stroke();
+        ctx.setLineDash([]);
+    }
+
+    if (gameState !== 'WON') {
+        ctx.save();
+        ctx.translate(ball.x, ball.y);
+        ctx.scale(Math.max(0, ball.scale), Math.max(0, ball.scale));
+        ctx.translate(-ball.x, -ball.y);
+
+        ctx.fillStyle = '#f8fafc';
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    ctx.restore();
+}
+
+function loop() {
+    update();
+    draw();
+    requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+
+</body>
+</html>
